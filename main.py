@@ -15,7 +15,28 @@ from utils import AvgMeter, get_lr
 
 
 def make_train_valid_dfs():
-    dataframe = pd.read_csv(f"{CFG.captions_path}/captions.csv")
+    # Load the CSV file
+    dataframe = pd.read_csv(f"{CFG.captions_path}/captions.csv", delimiter=',', quotechar='"')
+
+    # Split the 'image,caption' column into 'image' and 'caption' using only the first comma (n=1)
+    split_columns = dataframe["image,caption"].str.split(',', n=1, expand=True)
+
+    # If splitting was successful, assign the resulting columns to the DataFrame
+    dataframe["image"] = split_columns[0]
+    dataframe["caption"] = split_columns[1]
+
+    # Create an 'id' column based on the row index
+    dataframe["id"] = dataframe.index  # Or use 'dataframe['image']' as 'id' if preferred
+
+    # Check if the image files exist
+    dataframe["image_exists"] = dataframe["image"].apply(
+        lambda x: os.path.exists(os.path.join(CFG.image_path, x))
+    )
+
+    # Print out the number of missing images
+    missing_images = dataframe[dataframe["image_exists"] == False]
+    print(f"Number of missing images: {len(missing_images)}")
+
     max_id = dataframe["id"].max() + 1 if not CFG.debug else 100
     image_ids = np.arange(0, max_id)
     np.random.seed(42)
